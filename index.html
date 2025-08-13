@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมจับคู่ภาพ</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 8s ease infinite;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: white;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="stars" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="10" cy="10" r="1" fill="rgba(255,255,255,0.1)"/></pattern></defs><rect width="100" height="100" fill="url(%23stars)"/></svg>');
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            background: linear-gradient(45deg, #fff, #f0f8ff, #fff);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: titleShine 3s ease-in-out infinite;
+        }
+
+        @keyframes titleShine {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .game-info {
+            display: flex;
+            gap: 40px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .info-card {
+            background: rgba(255,255,255,0.15);
+            padding: 15px 25px;
+            border-radius: 20px;
+            backdrop-filter: blur(15px);
+            text-align: center;
+            min-width: 120px;
+            border: 2px solid rgba(255,255,255,0.2);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+        }
+
+        .info-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            max-width: 800px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            aspect-ratio: 1;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            transform-style: preserve-3d;
+            position: relative;
+            min-height: 120px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .card:hover {
+            transform: scale(1.05) rotateY(5deg);
+            box-shadow: 0 12px 35px rgba(0,0,0,0.25);
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched {
+            transform: scale(0.95);
+            cursor: default;
+            animation: matchPulse 0.6s ease-in-out, fadeOut 1s ease-in-out 0.8s forwards;
+        }
+
+        .card.matched:hover {
+            transform: scale(0.95);
+        }
+
+        .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            border-radius: 20px;
+            backface-visibility: hidden;
+            font-size: 3rem;
+            border: 3px solid rgba(255,255,255,0.3);
+            box-shadow: inset 0 4px 8px rgba(255,255,255,0.2);
+        }
+
+        .card-front {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+            border-radius: 20px;
+            backface-visibility: hidden;
+            transform: rotateY(180deg);
+            font-size: 4.5rem;
+            border: 3px solid rgba(102, 126, 234, 0.2);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        @keyframes matchPulse {
+            0% { transform: scale(0.95); }
+            50% { transform: scale(1.1); background: linear-gradient(135deg, #4CAF50, #81C784); }
+            100% { transform: scale(0.95); }
+        }
+
+        @keyframes fadeOut {
+            0% { 
+                opacity: 1; 
+                transform: scale(0.95); 
+            }
+            100% { 
+                opacity: 0; 
+                transform: scale(0.7); 
+                visibility: hidden;
+            }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 15px 35px;
+            border: none;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50, #81C784, #4CAF50);
+            background-size: 200% 200%;
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(76, 175, 80, 0.4);
+            background-position: 100% 100%;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #ff6b6b, #ff8a80, #ff6b6b);
+            background-size: 200% 200%;
+            color: white;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 10px 30px rgba(255, 107, 107, 0.4);
+            background-position: 100% 100%;
+        }
+
+        .game-over {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .game-over-content {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%);
+            color: #333;
+            padding: 50px;
+            border-radius: 30px;
+            text-align: center;
+            max-width: 450px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border: 3px solid rgba(102, 126, 234, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .game-over-content::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(102, 126, 234, 0.1), transparent);
+            animation: celebrationSpin 3s linear infinite;
+        }
+
+        @keyframes celebrationSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .game-over h2 {
+            font-size: 2.5rem;
+            margin-bottom: 25px;
+            background: linear-gradient(45deg, #4CAF50, #81C784);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            position: relative;
+            z-index: 1;
+        }
+
+        .game-over p {
+            font-size: 1.3rem;
+            margin-bottom: 35px;
+            position: relative;
+            z-index: 1;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .game-board {
+                grid-template-columns: repeat(3, 1fr);
+                max-width: 500px;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+            
+            .card {
+                font-size: 3rem;
+                min-height: 100px;
+            }
+            
+            .game-info {
+                gap: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .game-board {
+                grid-template-columns: repeat(2, 1fr);
+                max-width: 350px;
+            }
+            
+            .card {
+                font-size: 2.5rem;
+                min-height: 90px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 class="title">🎮 เกมจับคู่ภาพ</h1>
+        
+        <div class="game-info">
+            <div class="info-card">
+                <div class="info-label">เวลา</div>
+                <div class="info-value" id="timer">00:00</div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">คะแนน</div>
+                <div class="info-value" id="score">0</div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">จับคู่แล้ว</div>
+                <div class="info-value" id="matches">0/8</div>
+            </div>
+            <div class="info-card">
+                <div class="info-label">คะแนนสูงสุด</div>
+                <div class="info-value" id="highScore">0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-board" id="gameBoard">
+        <!-- Cards will be generated by JavaScript -->
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-primary" onclick="startNewGame()">เกมใหม่</button>
+        <button class="btn btn-secondary" onclick="resetGame()">รีเซ็ต</button>
+    </div>
+
+    <div class="game-over" id="gameOver">
+        <div class="game-over-content">
+            <h2>🎉 ยินดีด้วย!</h2>
+            <p id="finalStats">คุณจับคู่ครบทุกคู่แล้ว!</p>
+            <button class="btn btn-primary" onclick="startNewGame()">เล่นอีกครั้ง</button>
+        </div>
+    </div>
+
+    <script>
+        class MemoryGame {
+            constructor() {
+                this.cards = ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼'];
+                this.gameCards = [];
+                this.flippedCards = [];
+                this.matchedPairs = 0;
+                this.score = 0;
+                this.timer = 0;
+                this.timerInterval = null;
+                this.gameStarted = false;
+                this.canFlip = true;
+                this.highScore = this.loadHighScore();
+                
+                this.initGame();
+            }
+
+            loadHighScore() {
+                const saved = localStorage.getItem('memoryGameHighScore');
+                return saved ? parseInt(saved) : 0;
+            }
+
+            saveHighScore() {
+                if (this.score > this.highScore) {
+                    this.highScore = this.score;
+                    localStorage.setItem('memoryGameHighScore', this.highScore.toString());
+                    return true; // ทำสถิติใหม่
+                }
+                return false;
+            }
+
+            initGame() {
+                this.createGameBoard();
+                this.updateDisplay();
+            }
+
+            createGameBoard() {
+                // สร้างคู่ของการ์ด (16 ใบ = 8 คู่)
+                this.gameCards = [...this.cards, ...this.cards];
+                this.shuffleCards();
+                
+                const gameBoard = document.getElementById('gameBoard');
+                gameBoard.innerHTML = '';
+                
+                this.gameCards.forEach((emoji, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.dataset.index = index;
+                    card.dataset.emoji = emoji;
+                    
+                    card.innerHTML = `
+                        <div class="card-back">❓</div>
+                        <div class="card-front">${emoji}</div>
+                    `;
+                    
+                    card.addEventListener('click', () => this.flipCard(index));
+                    gameBoard.appendChild(card);
+                });
+            }
+
+            shuffleCards() {
+                for (let i = this.gameCards.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [this.gameCards[i], this.gameCards[j]] = [this.gameCards[j], this.gameCards[i]];
+                }
+            }
+
+            flipCard(index) {
+                if (!this.canFlip) return;
+                
+                const card = document.querySelector(`[data-index="${index}"]`);
+                if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+                
+                if (!this.gameStarted) {
+                    this.startTimer();
+                    this.gameStarted = true;
+                }
+                
+                card.classList.add('flipped');
+                this.flippedCards.push({index, emoji: this.gameCards[index], element: card});
+                
+                if (this.flippedCards.length === 2) {
+                    this.canFlip = false;
+                    setTimeout(() => this.checkMatch(), 1000);
+                }
+            }
+
+            checkMatch() {
+                const [card1, card2] = this.flippedCards;
+                
+                if (card1.emoji === card2.emoji) {
+                    // จับคู่สำเร็จ
+                    card1.element.classList.add('matched');
+                    card2.element.classList.add('matched');
+                    this.matchedPairs++;
+                    this.score += 100;
+                    
+                    // เพิ่มเอฟเฟกต์ดาวตกเมื่อจับคู่สำเร็จ
+                    this.createStarEffect(card1.element);
+                    this.createStarEffect(card2.element);
+                    
+                    // เช็คว่าเกมจบหรือยัง
+                    if (this.matchedPairs === this.cards.length) {
+                        setTimeout(() => this.endGame(), 500);
+                    }
+                } else {
+                    // จับคู่ไม่สำเร็จ - เพิ่มเอฟเฟกต์สั่น
+                    card1.element.style.animation = 'shake 0.5s ease-in-out';
+                    card2.element.style.animation = 'shake 0.5s ease-in-out';
+                    
+                    setTimeout(() => {
+                        card1.element.style.animation = '';
+                        card2.element.style.animation = '';
+                    }, 500);
+                    
+                    card1.element.classList.remove('flipped');
+                    card2.element.classList.remove('flipped');
+                    this.score = Math.max(0, this.score - 10);
+                }
+                
+                this.flippedCards = [];
+                this.canFlip = true;
+                this.updateDisplay();
+            }
+
+            createStarEffect(element) {
+                for (let i = 0; i < 6; i++) {
+                    const star = document.createElement('div');
+                    star.innerHTML = '⭐';
+                    star.style.position = 'absolute';
+                    star.style.fontSize = '20px';
+                    star.style.pointerEvents = 'none';
+                    star.style.zIndex = '1000';
+                    
+                    const rect = element.getBoundingClientRect();
+                    star.style.left = (rect.left + rect.width / 2) + 'px';
+                    star.style.top = (rect.top + rect.height / 2) + 'px';
+                    
+                    document.body.appendChild(star);
+                    
+                    const angle = (i * 60) * Math.PI / 180;
+                    const distance = 100;
+                    const endX = Math.cos(angle) * distance;
+                    const endY = Math.sin(angle) * distance;
+                    
+                    star.animate([
+                        { transform: 'translate(0, 0) scale(0)', opacity: 1 },
+                        { transform: `translate(${endX}px, ${endY}px) scale(1)`, opacity: 0 }
+                    ], {
+                        duration: 800,
+                        easing: 'ease-out'
+                    }).onfinish = () => star.remove();
+                }
+            }
+
+            startTimer() {
+                this.timerInterval = setInterval(() => {
+                    this.timer++;
+                    this.updateDisplay();
+                }, 1000);
+            }
+
+            stopTimer() {
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
+            }
+
+            formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            updateDisplay() {
+                document.getElementById('timer').textContent = this.formatTime(this.timer);
+                document.getElementById('score').textContent = this.score;
+                document.getElementById('matches').textContent = `${this.matchedPairs}/${this.cards.length}`;
+                document.getElementById('highScore').textContent = this.highScore;
+            }
+
+            endGame() {
+                this.stopTimer();
+                const finalTime = this.formatTime(this.timer);
+                const bonusScore = Math.max(0, 1000 - (this.timer * 5));
+                this.score += bonusScore;
+                
+                const isNewRecord = this.saveHighScore();
+                
+                let statsHTML = `
+                    เวลาที่ใช้: ${finalTime}<br>
+                    คะแนนรวม: ${this.score} คะแนน<br>
+                    โบนัสเวลา: +${bonusScore} คะแนน
+                `;
+                
+                if (isNewRecord) {
+                    statsHTML += `<br><br>🏆 <strong style="color: #FFD700;">สถิติใหม่!</strong> 🏆`;
+                }
+                
+                document.getElementById('finalStats').innerHTML = statsHTML;
+                document.getElementById('gameOver').style.display = 'flex';
+                this.updateDisplay();
+            }
+
+            resetGame() {
+                this.stopTimer();
+                this.flippedCards = [];
+                this.matchedPairs = 0;
+                this.score = 0;
+                this.timer = 0;
+                this.gameStarted = false;
+                this.canFlip = true;
+                
+                document.getElementById('gameOver').style.display = 'none';
+                this.createGameBoard();
+                this.updateDisplay();
+            }
+        }
+
+        // สร้างเกมใหม่
+        let game = new MemoryGame();
+
+        function startNewGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            game.resetGame();
+        }
+
+        function resetGame() {
+            game.resetGame();
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e6e427c5d54f52',t:'MTc1NTA3NDI1NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
